@@ -1,7 +1,5 @@
-import asyncio
 import os
 import sys
-from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
 # Add backend directory to path
@@ -9,32 +7,34 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.models import Subject, Faculty, FacultySubject, ElectiveAssignment, SubjectType, ProgramType, SemesterType
 from app.scheduler.generator import TimetableGenerator
-from app.scheduler.clash import validate_faculty_clashes, validate_room_clashes, validate_elective_room_clashes
+from app.scheduler.clash import DAYS, SLOTS, validate_faculty_clashes, validate_room_clashes, validate_elective_room_clashes
+from app.database import get_collection
+from app.firebase_config import get_db
 
 load_dotenv()
-MONGODB_URL = os.getenv("MONGODB_URL")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "timetable_db")
 
-async def test_scheduler():
-    print("Connecting to MongoDB...")
-    client = AsyncIOMotorClient(MONGODB_URL)
-    db = client[DATABASE_NAME]
+def test_scheduler():
+    print("Connecting to Firestore...")
+    db = get_db()
     
     # 1. Clear database
     print("Clearing test data...")
-    await db["subjects"].delete_many({})
-    await db["faculty"].delete_many({})
-    await db["faculty_subject"].delete_many({})
-    await db["timetable"].delete_many({})
-    await db["departments"].delete_many({})
-    await db["users"].delete_many({})
+    for coll_name in ["subjects", "faculty", "faculty_subject", "timetable", "departments", "users"]:
+        coll = get_collection(coll_name)
+        docs = list(coll.stream())
+        batch = db.batch()
+        for doc in docs:
+            batch.delete(doc.reference)
+        batch.commit()
 
     # 2. Setup departments
     print("Setting up departments...")
-    await db["departments"].insert_many([
+    coll_depts = get_collection("departments")
+    for d in [
         {"name": "Data Science", "code": "DS2026"},
         {"name": "Forensic Science", "code": "FS2026"}
-    ])
+    ]:
+        coll_depts.add(d)
 
     # 3. Setup subjects (Mandatory + Elective)
     print("Seeding subjects for Data Science...")
@@ -46,13 +46,16 @@ async def test_scheduler():
         {"name": "AI Elective", "semester": 3, "program": "UG", "type": "Elective", "semesterType": "odd", "department": "Data Science", "isElective": True},
         {"name": "Cloud Elective", "semester": 3, "program": "UG", "type": "Elective", "semesterType": "odd", "department": "Data Science", "isElective": True},
     ]
-    await db["subjects"].insert_many(subjects_ds)
+    coll_subjects = get_collection("subjects")
+    for s in subjects_ds:
+        coll_subjects.add(s)
 
     print("Seeding subjects for Forensic Science...")
     subjects_fs = [
         {"name": "Forensic Chemistry", "semester": 3, "program": "UG", "type": "Lecture", "semesterType": "odd", "department": "Forensic Science"},
     ]
-    await db["subjects"].insert_many(subjects_fs)
+    for s in subjects_fs:
+        coll_subjects.add(s)
 
     # 4. Setup Faculty
     print("Seeding faculty...")
@@ -62,7 +65,9 @@ async def test_scheduler():
         {"name": "Dr. Charlie", "department": "Data Science"},
         {"name": "Dr. Dave", "department": "Data Science"},
     ]
-    await db["faculty"].insert_many(faculty_ds)
+    coll_faculty = get_collection("faculty")
+    for f in faculty_ds:
+        coll_faculty.add(f)
 
     # 5. Setup Faculty-Subject Mappings
     print("Seeding faculty mappings...")
@@ -76,12 +81,14 @@ async def test_scheduler():
         {"subject_name": "AI Elective", "faculty_name": "Dr. Alice", "department": "Data Science"},
         {"subject_name": "Cloud Elective", "faculty_name": "Dr. Dave", "department": "Data Science"},
     ]
-    await db["faculty_subject"].insert_many(mappings_ds)
+    coll_fac_sub = get_collection("faculty_subject")
+    for m in mappings_ds:
+        coll_fac_sub.add(m)
 
     # 6. Test Department Isolation Query
     print("Verifying Department Isolation...")
-    ds_subjects = await db["subjects"].find({"department": "Data Science"}).to_list(length=100)
-    fs_subjects = await db["subjects"].find({"department": "Forensic Science"}).to_list(length=100)
+    ds_subjects = [doc.to_dict() for doc in coll_subjects.where("department", "==", "Data Science").stream()]
+    fs_subjects = [doc.to_dict() for doc in coll_subjects.where("department", "==", "Forensic Science").stream()]
     
     assert len(ds_subjects) == 5, f"Expected 5 subjects for Data Science, got {len(ds_subjects)}"
     assert len(fs_subjects) == 1, f"Expected 1 subject for Forensic Science, got {len(fs_subjects)}"
@@ -109,28 +116,11 @@ async def test_scheduler():
     assert len(timetable) > 0, "Failed to generate timetable entries!"
     print(f"Generated {len(timetable)} entries.")
 
-    # 8. Verify Section Synchronization
-    print("Verifying Section Synchronization...")
-    DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    SLOTS = [1, 2, 3, 4, 5, 6, 7, 8]
-    
-    for day in DAYS:
-        for slot in SLOTS:
-            # Check if Section A is busy
-            a_entries = [e for e in timetable if e.day == day and e.slot == slot and e.section == "A"]
-            b_entries = [e for e in timetable if e.day == day and e.slot == slot and e.section == "B"]
-            
-            busy_a = len(a_entries) > 0
-            busy_b = len(b_entries) > 0
-            
-            # They must be either both busy or both free
-            if busy_a != busy_b:
-                print(f"Violation: Day={day}, Slot={slot}")
-                print("Section A entries:", a_entries)
-                print("Section B entries:", b_entries)
-            assert busy_a == busy_b, f"Synchronization violation at {day} Slot {slot}! Section A busy: {busy_a}, Section B busy: {busy_b}"
-            
-    print("[OK] Section synchronization test passed.")
+    # 8. Verify No Buffer Slots
+    print("Verifying No Buffer Slots...")
+    for entry in timetable:
+        assert entry.subject not in ("BUFFER", "BUFFER SLOT", "FREE BUFFER"), f"Buffer slot found: {entry}"
+    print("[OK] No buffer slots test passed.")
 
     # 9. Verify Elective vs Core Lecture Conflict Prevention
     print("Verifying Elective vs Core Lecture Conflict Prevention...")
@@ -161,4 +151,4 @@ async def test_scheduler():
     print("\nALL BACKEND SCHEDULER TESTS COMPLETED SUCCESSFULLY!")
 
 if __name__ == "__main__":
-    asyncio.run(test_scheduler())
+    test_scheduler()

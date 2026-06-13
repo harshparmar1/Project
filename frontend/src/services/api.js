@@ -30,6 +30,14 @@ export const login = (payload) => api.post('/auth/login', payload);
 export const getDepartments = () => api.get('/departments');
 export const configureDepartment = (payload) => api.post('/departments', payload);
 
+// Faculty Requests Endpoints
+export const getOtherDepartmentsFaculty = () => api.get('/other-departments-faculty');
+export const createFacultyRequest = (payload) => api.post('/faculty-requests', payload);
+export const getSentRequests = () => api.get('/faculty-requests/sent');
+export const getReceivedRequests = () => api.get('/faculty-requests/received');
+export const updateFacultyRequest = (requestId, status) =>
+  api.patch(`/faculty-requests/${requestId}`, { status });
+
 // Timetable Endpoints
 export const addSubjects = (subjects) => api.post('/subjects', subjects);
 export const getSubjects = (semesterType) => {

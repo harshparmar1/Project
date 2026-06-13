@@ -8,8 +8,11 @@ import {
   getFaculty,
   getFacultyMappings,
   addElectiveAssignments,
-  getDepartments,
-  configureDepartment,
+  getOtherDepartmentsFaculty,
+  createFacultyRequest,
+  getSentRequests,
+  getReceivedRequests,
+  updateFacultyRequest,
 } from '../services/api';
 import {
   Plus,
@@ -21,7 +24,9 @@ import {
   GraduationCap,
   Layers,
   FlaskConical,
-  Building2,
+  UserPlus,
+  Check,
+  X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SemesterModeSelector from '../components/SemesterModeSelector';
@@ -68,34 +73,77 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   
-  const [departments, setDepartments] = useState([]);
-  const [newDeptName, setNewDeptName] = useState('');
-  const [newDeptCode, setNewDeptCode] = useState('');
 
-  const handleConfigureDept = async (e) => {
+
+  const [otherFaculty, setOtherFaculty] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [reqFacultyName, setReqFacultyName] = useState('');
+  const [reqTargetDept, setReqTargetDept] = useState('');
+
+  const fetchRequestData = async () => {
+    try {
+      const [otherFacRes, sentRes, receivedRes] = await Promise.all([
+        getOtherDepartmentsFaculty(),
+        getSentRequests(),
+        getReceivedRequests(),
+      ]);
+      setOtherFaculty(otherFacRes.data);
+      setSentRequests(sentRes.data);
+      setReceivedRequests(receivedRes.data);
+    } catch (err) {
+      console.error('Error fetching request data:', err);
+    }
+  };
+
+  const handleRequestSubmit = async (e) => {
     e.preventDefault();
-    if (!newDeptName || !newDeptCode) {
-      setStatus({ type: 'error', message: 'Department name and code are required.' });
+    if (!reqFacultyName || !reqTargetDept) {
+      setStatus({ type: 'error', message: 'Faculty name and target department are required.' });
       return;
     }
     setLoading(true);
-    setStatus({ type: 'info', message: 'Saving department code...' });
+    setStatus({ type: 'info', message: 'Submitting faculty request...' });
     try {
-      await configureDepartment({ name: newDeptName, code: newDeptCode });
-      const depts = await getDepartments();
-      setDepartments(depts.data);
-      setNewDeptName('');
-      setNewDeptCode('');
-      setStatus({ type: 'success', message: `Department code saved successfully.` });
+      await createFacultyRequest({
+        target_department: reqTargetDept,
+        faculty_name: reqFacultyName,
+      });
+      setReqFacultyName('');
+      setReqTargetDept('');
+      await fetchRequestData();
+      setStatus({ type: 'success', message: 'Faculty request submitted successfully.' });
     } catch (err) {
       setStatus({
         type: 'error',
-        message: err.response?.data?.detail || err.message || 'Failed to save department code.',
+        message: err.response?.data?.detail || err.message || 'Failed to submit request.',
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const handleUpdateStatus = async (requestId, newStatus) => {
+    setLoading(true);
+    setStatus({ type: 'info', message: `Updating request to ${newStatus}...` });
+    try {
+      await updateFacultyRequest(requestId, newStatus);
+      await fetchRequestData();
+      const facs = await getFaculty();
+      setRegisteredFaculty(
+        facs.data.map(formatFaculty).filter((f) => f.name.trim() !== '')
+      );
+      setStatus({ type: 'success', message: `Request ${newStatus} successfully.` });
+    } catch (err) {
+      setStatus({
+        type: 'error',
+        message: err.response?.data?.detail || err.message || 'Failed to update request.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const matchesView = (item) =>
     item.program === activeTab && getSubjectMode(item) === semesterMode;
@@ -140,11 +188,10 @@ const AdminPanel = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [subs, facs, maps, depts] = await Promise.all([
+        const [subs, facs, maps] = await Promise.all([
           getSubjects(),
           getFaculty(),
           getFacultyMappings(),
-          getDepartments(),
         ]);
         const formattedSubjects = subs.data.map((sub) => {
           let currentBatches = sub.batches || [];
@@ -179,13 +226,18 @@ const AdminPanel = () => {
               }))
             : []
         );
-        setDepartments(depts.data);
       } catch (err) {
         console.error('Error fetching data:', err);
       }
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'Faculty Requests') {
+      fetchRequestData();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     setMappings((prev) => {
@@ -350,14 +402,28 @@ const AdminPanel = () => {
     setLoading(false);
   };
 
+  const areParallelElectives = (name1, name2) => {
+    const sub1 = subjects.find(s => s.name === name1);
+    const sub2 = subjects.find(s => s.name === name2);
+    if (!sub1 || !sub2) return false;
+    return (
+      sub1.program === sub2.program &&
+      sub1.semester === sub2.semester &&
+      (sub1.electiveGroup || 'default') === (sub2.electiveGroup || 'default') &&
+      (sub1.semesterType || 'odd') === (sub2.semesterType || 'odd')
+    );
+  };
+
   const getFacultyForElectiveMapping = (mappingIndex, currentFaculty) => {
+    const targetSubjectName = mappings[mappingIndex]?.subject_name;
     const usedElsewhere = new Set(
       mappings
         .filter(
           (m, idx) =>
             idx !== mappingIndex &&
-            isElectiveName(m.subject_name) &&
-            m.faculty_name
+            isGlobalElectiveName(m.subject_name) &&
+            m.faculty_name &&
+            areParallelElectives(targetSubjectName, m.subject_name)
         )
         .map((m) => m.faculty_name)
     );
@@ -369,13 +435,15 @@ const AdminPanel = () => {
   const updateMapping = (index, field, value) => {
     const next = [...mappings];
     next[index] = { ...next[index], [field]: value };
-    if (field === 'faculty_name' && isElectiveName(next[index].subject_name)) {
+    if (field === 'faculty_name' && isGlobalElectiveName(next[index].subject_name)) {
+      const targetSubjectName = next[index].subject_name;
       mappings.forEach((m, idx) => {
         if (
           idx !== index &&
-          isElectiveName(m.subject_name) &&
+          isGlobalElectiveName(m.subject_name) &&
           m.faculty_name === value &&
-          value
+          value &&
+          areParallelElectives(targetSubjectName, m.subject_name)
         ) {
           next[idx] = { ...next[idx], faculty_name: '' };
         }
@@ -538,7 +606,7 @@ const AdminPanel = () => {
       </header>
 
       <div className="flex gap-4 border-b border-slate-200 pb-1">
-        {['UG', 'PG', 'Departments'].map((tab) => (
+        {['UG', 'PG', 'Faculty Requests'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -546,7 +614,9 @@ const AdminPanel = () => {
               activeTab === tab ? 'text-primary-600' : 'text-slate-500'
             }`}
           >
-            {tab === 'Departments' ? 'Departments' : `${tab} Program`}
+            {tab === 'Faculty Requests'
+              ? 'Faculty Requests'
+              : `${tab} Program`}
             {activeTab === tab && (
               <motion.div
                 layoutId="activeTab"
@@ -578,60 +648,128 @@ const AdminPanel = () => {
         </motion.div>
       )}
 
-      {activeTab === 'Departments' ? (
+      {activeTab === 'Faculty Requests' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Request Faculty Section */}
           <section className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
             <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
-              <Building2 className="w-5 h-5 text-primary-600" />
-              Configure Department Code
+              <UserPlus className="w-5 h-5 text-primary-600" />
+              Request Borrowed Faculty
             </h3>
-            <form onSubmit={handleConfigureDept} className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Select a faculty member from another department. Once their department head approves, they will be available in your subjects mapping dropdown.
+            </p>
+            <form onSubmit={handleRequestSubmit} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Department Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Data Science"
-                  value={newDeptName}
-                  onChange={(e) => setNewDeptName(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Unique Department Code</label>
-                <input
-                  type="text"
-                  placeholder="e.g. DS2026"
-                  value={newDeptCode}
-                  onChange={(e) => setNewDeptCode(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                />
+                <label className="text-xs font-bold text-slate-500 uppercase">Select Faculty & Department</label>
+                <select
+                  value={reqFacultyName ? `${reqFacultyName}|${reqTargetDept}` : ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const [name, dept] = val.split('|');
+                      setReqFacultyName(name);
+                      setReqTargetDept(dept);
+                    } else {
+                      setReqFacultyName('');
+                      setReqTargetDept('');
+                    }
+                  }}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all bg-white"
+                >
+                  <option value="">Choose a faculty member...</option>
+                  {otherFaculty.map((f, idx) => (
+                    <option key={idx} value={`${f.name}|${f.department}`}>
+                      {f.name} ({f.teacher_type || f.teacherType || 'Assistant'}) — {f.department}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !reqFacultyName}
                 className="flex items-center gap-2 bg-gradient-to-r from-primary-600 to-blue-600 hover:from-primary-500 hover:to-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-md transition-all disabled:opacity-50"
               >
-                Save Code
+                Send Request
               </button>
             </form>
           </section>
 
-          <section className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-800">Existing Departments</h3>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-              {departments.map((dept) => (
-                <div key={dept.name} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
-                  <h4 className="font-bold text-sm text-slate-800">{dept.name}</h4>
-                  <span className="text-xs font-bold font-mono px-3 py-1 bg-primary-50 text-primary-700 border border-primary-100 rounded-lg">
-                    {dept.code}
-                  </span>
-                </div>
-              ))}
-              {departments.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No departments configured yet.</p>
-              )}
-            </div>
-          </section>
+          {/* Requests Management Section */}
+          <div className="space-y-8">
+            {/* Incoming Requests */}
+            <section className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-800">Incoming Requests (To Approve/Reject)</h3>
+              <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                {receivedRequests.map((req) => (
+                  <div key={req._id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-800">{req.faculty_name}</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Requested by: {req.requester_department}</p>
+                    </div>
+                    {req.status === 'pending' ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleUpdateStatus(req._id, 'approved')}
+                          disabled={loading}
+                          className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-colors"
+                          title="Approve"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(req._id, 'rejected')}
+                          disabled={loading}
+                          className="p-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg transition-colors"
+                          title="Reject"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className={`text-xs font-bold uppercase px-3 py-1 rounded-lg border ${
+                        req.status === 'approved'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
+                        {req.status}
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {receivedRequests.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-4">No incoming requests.</p>
+                )}
+              </div>
+            </section>
+
+            {/* Outgoing Requests */}
+            <section className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-800">Outgoing Requests (Sent)</h3>
+              <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                {sentRequests.map((req) => (
+                  <div key={req._id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-800">{req.faculty_name}</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Target Dept: {req.target_department}</p>
+                    </div>
+                    <span className={`text-xs font-bold uppercase px-3 py-1 rounded-lg border ${
+                      req.status === 'approved'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : req.status === 'rejected'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {req.status}
+                    </span>
+                  </div>
+                ))}
+                {sentRequests.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-4">No requests sent yet.</p>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

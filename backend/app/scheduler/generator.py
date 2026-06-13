@@ -35,6 +35,7 @@ class TimetableGenerator:
         faculty_mapping: Dict[Union[str, Tuple[str, str]], str],
         elective_assignments: Optional[List[ElectiveAssignment]] = None,
         semester_type: str = "odd",
+        other_department_entries: Optional[List[Any]] = None,
     ):
         self.semester_type = normalize_semester_type(semester_type)
         self.subjects = subjects
@@ -45,6 +46,19 @@ class TimetableGenerator:
         # Global busy states
         self.faculty_busy = create_faculty_busy()
         self.room_busy = create_room_busy()
+        
+        if other_department_entries:
+            for entry in other_department_entries:
+                day = entry.day if hasattr(entry, "day") else entry.get("day")
+                slot = entry.slot if hasattr(entry, "slot") else entry.get("slot")
+                faculty = entry.faculty if hasattr(entry, "faculty") else entry.get("faculty")
+                room = entry.room if hasattr(entry, "room") else entry.get("room")
+                
+                if day in DAYS and slot in SLOTS:
+                    if faculty and faculty not in ("-", ""):
+                        mark_faculty_busy(self.faculty_busy, day, slot, faculty)
+                    if room and room not in ("-", ""):
+                        mark_room_busy(self.room_busy, day, slot, room)
         
         # Scoped busy states: keyed by (program, semester, section/batch) at (day, slot)
         self.section_busy = {day: {slot: {} for slot in SLOTS} for day in DAYS}
@@ -111,6 +125,20 @@ class TimetableGenerator:
                 return True
         return False
 
+    def _is_subject_consecutive(self, day: str, slot: int, section: str, subject: str, current_entries: List[TimetableEntry]) -> bool:
+        for entry in current_entries:
+            if (
+                entry.day == day
+                and entry.section == section
+                and entry.subject == subject
+                and abs(entry.slot - slot) == 1
+            ):
+                return True
+        return False
+
+    def _has_consecutive_faculty_clash(self, day: str, slot: int, fac: str) -> bool:
+        return False
+
     def generate(self) -> List[TimetableEntry]:
         self.failed_allocations = []
         self.timetable = []
@@ -119,7 +147,7 @@ class TimetableGenerator:
         for room in CLASSROOMS + LABS:
             self.room_busy["Wednesday"][7].add(room)
 
-        programs = sorted({self._prog_key(s.program) for s in self.subjects})
+        programs = sorted({self._prog_key(s.program) for s in self.subjects}, reverse=True)
         if not programs:
             programs = ["UG", "PG"]
 
@@ -143,6 +171,12 @@ class TimetableGenerator:
                             "semester": sem,
                             "section": "A/B"
                         })
+
+        # Remove all buffer slot entries (Rule 7)
+        self.timetable = [
+            e for e in self.timetable
+            if e.subject not in ("BUFFER", "BUFFER SLOT", "FREE BUFFER")
+        ]
 
         # Post-generation checks
         self.clash_report["faculty"] = validate_faculty_clashes(self.timetable)
@@ -207,12 +241,15 @@ class TimetableGenerator:
         scheduled_tasks: Set[int] = set()
 
         # Backtracking search
-        max_iterations = 12000
+        max_iterations = 250000
         iteration_count = 0
 
         def backtrack(task_idx: int) -> bool:
             nonlocal iteration_count
             iteration_count += 1
+            if program == "PG" or iteration_count < 100:
+                task_desc = f"{tasks[task_idx]['type']} - {tasks[task_idx].get('subject', '')} {tasks[task_idx].get('section', '')} {tasks[task_idx].get('batch', '')}" if task_idx < len(tasks) else "DONE"
+                print(f"Iter {iteration_count}: task_idx={task_idx}/{len(tasks)} -> {task_desc}")
             if iteration_count > max_iterations:
                 return False
 
@@ -235,7 +272,7 @@ class TimetableGenerator:
                         busy_b = st_b is not None
                         
                         if busy_a != busy_b:
-                            if st_a == "Buffer" and not busy_b:
+                            if not busy_b:
                                 self.section_busy[day][slot][k_b] = "Buffer"
                                 semester_entries.append(
                                     TimetableEntry(
@@ -251,7 +288,7 @@ class TimetableGenerator:
                                         semesterType=self.semester_type,
                                     )
                                 )
-                            elif st_b == "Buffer" and not busy_a:
+                            elif not busy_a:
                                 self.section_busy[day][slot][k_a] = "Buffer"
                                 semester_entries.append(
                                     TimetableEntry(
@@ -267,8 +304,6 @@ class TimetableGenerator:
                                         semesterType=self.semester_type,
                                     )
                                 )
-                            else:
-                                return False
                 return True
 
             task = tasks[task_idx]
@@ -300,6 +335,9 @@ class TimetableGenerator:
                         for sub in task["subjects"]:
                             fac = self._resolve_faculty(sub.name)
                             if not fac or is_faculty_busy(self.faculty_busy, day, slot, fac):
+                                valid_faculties = False
+                                break
+                            if self._has_consecutive_faculty_clash(day, slot, fac):
                                 valid_faculties = False
                                 break
                             faculties.append(fac)
@@ -376,7 +414,12 @@ class TimetableGenerator:
 
                 for day in lab_days:
                     for s1, s2 in slot_pairs:
+                        is_target = (task_idx in [1, 2])
+                        if is_target:
+                            print(f"  Checking {day} ({s1},{s2}) for task {task_idx} ({sub_name} {batch}):")
                         if (day, s1) in elective_slots or (day, s2) in elective_slots:
+                            if is_target:
+                                print(f"    Rejected: in elective_slots")
                             continue
 
                         # Faculty busy check
@@ -384,6 +427,15 @@ class TimetableGenerator:
                             is_faculty_busy(self.faculty_busy, day, s1, fac)
                             or is_faculty_busy(self.faculty_busy, day, s2, fac)
                         ):
+                            if is_target:
+                                print(f"    Rejected: faculty {fac} busy (s1 busy: {is_faculty_busy(self.faculty_busy, day, s1, fac)}, s2 busy: {is_faculty_busy(self.faculty_busy, day, s2, fac)})")
+                            continue
+
+                        # Faculty Continuity check (Rule 2)
+                        lab_consec_clash = False
+                        if lab_consec_clash:
+                            if is_target:
+                                print(f"    Rejected: lab consec clash for {fac}")
                             continue
 
                         # Section busy check
@@ -391,6 +443,8 @@ class TimetableGenerator:
                         st_s1 = self.section_busy[day][s1].get(k_sec)
                         st_s2 = self.section_busy[day][s2].get(k_sec)
                         if st_s1 in ["Lecture", "Elective", "Buffer"] or st_s2 in ["Lecture", "Elective", "Buffer"]:
+                            if is_target:
+                                print(f"    Rejected: section busy ({st_s1}, {st_s2})")
                             continue
 
                         # Batch busy check
@@ -399,6 +453,8 @@ class TimetableGenerator:
                             self.batch_busy[day][s1].get(k_batch)
                             or self.batch_busy[day][s2].get(k_batch)
                         ):
+                            if is_target:
+                                print(f"    Rejected: batch busy")
                             continue
 
                         # Room check
@@ -408,8 +464,12 @@ class TimetableGenerator:
                             and not is_room_busy(self.room_busy, day, s2, r)
                         ]
                         if not available:
+                            if is_target:
+                                print(f"    Rejected: no rooms available")
                             continue
                         room = available[0]
+                        if is_target:
+                            print(f"    Selected room: {room}")
 
                         # Immediate sync-fill logic for the OTHER section
                         other_sec = "B" if sec == "A" else "A"
@@ -429,10 +489,20 @@ class TimetableGenerator:
                             for idx, t in enumerate(tasks):
                                 if idx not in scheduled_tasks and t["type"] == "Lab" and t["section"] == other_sec:
                                     ofac = self._resolve_faculty(t["subject"], t["batch"])
+                                    
+                                    # Rule 2 Check for other lab
+                                    ofac_lab_consec_clash = False
+                                    for adj_slot in (s1 - 1, s2 + 1):
+                                        if adj_slot in SLOTS:
+                                            if ofac in self.faculty_busy[day].get(adj_slot, set()):
+                                                ofac_lab_consec_clash = True
+                                                break
+                                                
                                     if (
                                         ofac and ofac != fac
                                         and not is_faculty_busy(self.faculty_busy, day, s1, ofac)
                                         and not is_faculty_busy(self.faculty_busy, day, s2, ofac)
+                                        and not ofac_lab_consec_clash
                                     ):
                                         other_lab_task_idx = idx
                                         break
@@ -482,11 +552,24 @@ class TimetableGenerator:
                                 for (idx1, ot1), (idx2, ot2) in candidate_pairs:
                                     ofac1 = self._resolve_faculty(ot1["subject"])
                                     ofac2 = self._resolve_faculty(ot2["subject"])
+                                    
+                                    # Rule 2 & Rule 1 Checks for other lectures
+                                    ofac1_clash = self._has_consecutive_faculty_clash(day, s1, ofac1)
+                                    ofac2_clash = self._has_consecutive_faculty_clash(day, s2, ofac2)
+                                    
+                                    # Rule 1 Checks
+                                    sub_consec1 = self._is_subject_consecutive(day, s1, other_sec, ot1["subject"], semester_entries)
+                                    sub_consec2 = self._is_subject_consecutive(day, s2, other_sec, ot2["subject"], semester_entries)
+                                    
                                     if (
                                         ofac1 and ofac2
                                         and ofac1 != fac and ofac2 != fac
                                         and not is_faculty_busy(self.faculty_busy, day, s1, ofac1)
                                         and not is_faculty_busy(self.faculty_busy, day, s2, ofac2)
+                                        and not ofac1_clash
+                                        and not ofac2_clash
+                                        and not sub_consec1
+                                        and not sub_consec2
                                     ):
                                         found_pair = (idx1, ot1, ofac1, idx2, ot2, ofac2)
                                         break
@@ -537,7 +620,7 @@ class TimetableGenerator:
                                     fill_ok = False
 
                         if not fill_ok:
-                            # Revert fill entries if any
+                            # Revert any partial changes first
                             for entry in fill_entries:
                                 self.faculty_busy[entry.day][entry.slot].discard(entry.faculty)
                                 self.room_busy[entry.day][entry.slot].discard(entry.room)
@@ -547,6 +630,23 @@ class TimetableGenerator:
                                 else:
                                     for b in BATCHES_BY_SECTION[other_sec]:
                                         self.batch_busy[entry.day][entry.slot].pop((program, semester, b), None)
+                            
+                            fill_entries = []
+                            fill_tasks = []
+                            # Fall back to scheduling Buffer slots for the other section in s1 and s2
+                            for slot in (s1, s2):
+                                entry = TimetableEntry(
+                                    day=day, slot=slot, section=other_sec, batch=None,
+                                    subject="FREE SLOT", faculty="-", room="-",
+                                    program=program, semester=semester, semesterType=self.semester_type
+                                )
+                                fill_entries.append(entry)
+                                self.section_busy[day][slot][k_other] = "Free"
+                                for b in BATCHES_BY_SECTION[other_sec]:
+                                    self.batch_busy[day][slot][(program, semester, b)] = True
+                            fill_ok = True
+
+                        if not fill_ok:
                             continue
 
                         # Apply current task
@@ -639,6 +739,10 @@ class TimetableGenerator:
                         if self.section_busy[day][slot].get(k_sec) is not None:
                             continue
 
+                        # Subject Continuity check (Rule 1)
+                        if self._is_subject_consecutive(day, slot, sec, sub_name, semester_entries):
+                            continue
+
                         # Batch busy check
                         batch_conflict = False
                         for b in BATCHES_BY_SECTION[sec]:
@@ -652,13 +756,14 @@ class TimetableGenerator:
                         if is_faculty_busy(self.faculty_busy, day, slot, fac):
                             continue
 
+                        # Faculty Continuity check (Rule 2)
+                        if self._has_consecutive_faculty_clash(day, slot, fac):
+                            continue
+
                         # Buffer slot logic
                         needs_buffer = False
                         buffer_slot = slot + 1
-                        if (
-                            slot >= 3
-                            and self.section_busy[day][slot - 1].get(k_sec) == "Lab"
-                        ):
+                        if False:
                             needs_buffer = True
 
                         is_inherent_break = False
@@ -719,9 +824,18 @@ class TimetableGenerator:
                                 
                                 for idx, ot in distinct_unscheduled:
                                     ofac = self._resolve_faculty(ot["subject"])
+                                    
+                                    # Rule 2 Check for other lecture
+                                    ofac_consec_clash = self._has_consecutive_faculty_clash(day, slot, ofac)
+                                    
+                                    # Rule 1 Check for other lecture
+                                    sub_consec = self._is_subject_consecutive(day, slot, other_sec, ot["subject"], semester_entries)
+                                    
                                     if (
                                         ofac and ofac != fac
                                         and not is_faculty_busy(self.faculty_busy, day, slot, ofac)
+                                        and not ofac_consec_clash
+                                        and not sub_consec
                                         and daily_lectures[other_sec][day] < MAX_LECTURES_PER_DAY_PER_SECTION
                                         and not self._is_third_continuous(day, slot, k_other)
                                     ):

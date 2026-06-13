@@ -7,7 +7,7 @@ SLOTS = [1, 2, 3, 4, 5, 6, 7, 8]
 
 
 def _today_name() -> str:
-    names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     return names[datetime.now().weekday()]
 
 

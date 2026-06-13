@@ -1,14 +1,20 @@
-import os
-from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
+"""
+database.py
+===========
+Drop-in replacement for the old Motor/MongoDB database module.
+Returns a Firestore CollectionReference for any collection name.
+"""
 
-load_dotenv()
+from google.cloud.firestore_v1 import CollectionReference
+from .firebase_config import get_db
 
-MONGODB_URL = os.getenv("MONGODB_URL")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "timetable_db")
 
-client = AsyncIOMotorClient(MONGODB_URL)
-database = client[DATABASE_NAME]
+def get_collection(collection_name: str) -> CollectionReference:
+    """
+    Return a Firestore CollectionReference.
 
-async def get_collection(collection_name: str):
-    return database[collection_name]
+    Usage is intentionally synchronous – wrap calls with
+    `starlette.concurrency.run_in_threadpool` inside async route handlers.
+    """
+    db = get_db()
+    return db.collection(collection_name)
