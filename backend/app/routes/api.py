@@ -204,7 +204,7 @@ def _filter_by_mode(items: List[dict], semester_type: Optional[str]) -> List[dic
     return [i for i in items if _doc_semester_type(i) == mode]
 
 
-_TIMETABLE_RESERVED_SUBJECTS = frozenset({"BUFFER SLOT", "TDPCL"})
+_TIMETABLE_RESERVED_SUBJECTS = frozenset({"FREE SLOT", "TDPCL"})
 
 
 def _sync_cleanup_orphan_faculty_mappings(
@@ -775,7 +775,7 @@ async def generate_timetable(body: GenerateRequest = Body(...), dept: str = Depe
         )
 
         subject_names = {s.name for s in subjects}
-        scheduled_subjects = {e.subject for e in timetable if e.subject not in ("BUFFER SLOT", "TDPCL")}
+        scheduled_subjects = {e.subject for e in timetable if e.subject not in ("FREE SLOT", "TDPCL")}
         missing_subjects = sorted(subject_names - scheduled_subjects)
 
         return {

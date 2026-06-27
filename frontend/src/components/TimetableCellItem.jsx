@@ -10,11 +10,11 @@ const TimetableCellItem = ({ item, hasRoomConflict = false }) => {
     );
   }
 
-  if (item.type === 'buffer' || item.subject === 'BUFFER SLOT') {
+  if (item.type === 'free_slot' || item.subject === 'FREE SLOT') {
     return (
       <div className="p-3 rounded-xl border border-dashed border-indigo-300 bg-indigo-50 text-center min-h-[72px] flex items-center justify-center">
         <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
-          Buffer
+          Free Slot
         </span>
       </div>
     );

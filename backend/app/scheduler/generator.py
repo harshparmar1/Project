@@ -172,10 +172,10 @@ class TimetableGenerator:
                             "section": "A/B"
                         })
 
-        # Remove all buffer slot entries (Rule 7)
+        # Remove all free slot entries (Rule 7)
         self.timetable = [
             e for e in self.timetable
-            if e.subject not in ("BUFFER", "BUFFER SLOT", "FREE BUFFER")
+            if e.subject not in ("BUFFER", "FREE SLOT", "FREE BUFFER")
         ]
 
         # Post-generation checks
@@ -258,7 +258,7 @@ class TimetableGenerator:
                 task_idx += 1
 
             if task_idx == len(tasks):
-                # Verify Section Synchronization & Insert Buffers
+                # Verify Section Synchronization & Insert Free Slots
                 for day in DAYS:
                     for slot in SLOTS:
                         if not self._is_valid_lecture_slot(day, slot):
@@ -273,14 +273,14 @@ class TimetableGenerator:
                         
                         if busy_a != busy_b:
                             if not busy_b:
-                                self.section_busy[day][slot][k_b] = "Buffer"
+                                self.section_busy[day][slot][k_b] = "Free Slot"
                                 semester_entries.append(
                                     TimetableEntry(
                                         day=day,
                                         slot=slot,
                                         section="B",
                                         batch=None,
-                                        subject="BUFFER SLOT",
+                                        subject="FREE SLOT",
                                         faculty="-",
                                         room="-",
                                         program=program,
@@ -289,14 +289,14 @@ class TimetableGenerator:
                                     )
                                 )
                             elif not busy_a:
-                                self.section_busy[day][slot][k_a] = "Buffer"
+                                self.section_busy[day][slot][k_a] = "Free Slot"
                                 semester_entries.append(
                                     TimetableEntry(
                                         day=day,
                                         slot=slot,
                                         section="A",
                                         batch=None,
-                                        subject="BUFFER SLOT",
+                                        subject="FREE SLOT",
                                         faculty="-",
                                         room="-",
                                         program=program,
@@ -442,7 +442,7 @@ class TimetableGenerator:
                         k_sec = (program, semester, sec)
                         st_s1 = self.section_busy[day][s1].get(k_sec)
                         st_s2 = self.section_busy[day][s2].get(k_sec)
-                        if st_s1 in ["Lecture", "Elective", "Buffer"] or st_s2 in ["Lecture", "Elective", "Buffer"]:
+                        if st_s1 in ["Lecture", "Elective", "Free Slot"] or st_s2 in ["Lecture", "Elective", "Free Slot"]:
                             if is_target:
                                 print(f"    Rejected: section busy ({st_s1}, {st_s2})")
                             continue
@@ -760,7 +760,7 @@ class TimetableGenerator:
                         if self._has_consecutive_faculty_clash(day, slot, fac):
                             continue
 
-                        # Buffer slot logic
+                        # Free slot logic
                         needs_buffer = False
                         buffer_slot = slot + 1
                         if False:
@@ -803,13 +803,13 @@ class TimetableGenerator:
                                 if idx not in scheduled_tasks and t["type"] == "Lecture" and t["section"] == other_sec
                             ]
                             if not unscheduled_other:
-                                # Fall back to scheduling a Buffer slot for the other section
+                                # Fall back to scheduling a Free slot for the other section
                                 fill_entry = TimetableEntry(
                                     day=day, slot=slot, section=other_sec, batch=None,
-                                    subject="BUFFER SLOT", faculty="-", room="-",
+                                    subject="FREE SLOT", faculty="-", room="-",
                                     program=program, semester=semester, semesterType=self.semester_type
                                 )
-                                self.section_busy[day][slot][k_other] = "Buffer"
+                                self.section_busy[day][slot][k_other] = "Free Slot"
                                 for b in BATCHES_BY_SECTION[other_sec]:
                                     self.batch_busy[day][slot][(program, semester, b)] = True
                                 fill_ok = True
@@ -856,13 +856,13 @@ class TimetableGenerator:
                                             fill_task_idx = idx
                                             break
                                 if fill_task_idx is None:
-                                    # Fall back to scheduling a Buffer slot for the other section
+                                    # Fall back to scheduling a Free slot for the other section
                                     fill_entry = TimetableEntry(
                                         day=day, slot=slot, section=other_sec, batch=None,
-                                        subject="BUFFER SLOT", faculty="-", room="-",
+                                        subject="FREE SLOT", faculty="-", room="-",
                                         program=program, semester=semester, semesterType=self.semester_type
                                     )
-                                    self.section_busy[day][slot][k_other] = "Buffer"
+                                    self.section_busy[day][slot][k_other] = "Free Slot"
                                     for b in BATCHES_BY_SECTION[other_sec]:
                                         self.batch_busy[day][slot][(program, semester, b)] = True
                                     fill_ok = True
@@ -895,10 +895,10 @@ class TimetableGenerator:
                         if fill_task_idx is not None:
                             scheduled_tasks.add(fill_task_idx)
 
-                        # Apply buffer
+                        # Apply free slot
                         buffer_applied = False
                         if needs_buffer and buffer_slot <= 8 and not is_inherent_break:
-                            self.section_busy[day][buffer_slot][k_sec] = "Buffer"
+                            self.section_busy[day][buffer_slot][k_sec] = "Free Slot"
                             for b in BATCHES_BY_SECTION[sec]:
                                 self.batch_busy[day][buffer_slot][(program, semester, b)] = True
                             buffer_applied = True

@@ -5,11 +5,10 @@ Drop-in replacement for the old Motor/MongoDB database module.
 Returns a Firestore CollectionReference for any collection name.
 """
 
-from google.cloud.firestore_v1 import CollectionReference
-from .firebase_config import get_db
+from .firebase_config import get_db, MockCollectionReference
 
 
-def get_collection(collection_name: str) -> CollectionReference:
+def get_collection(collection_name: str) -> MockCollectionReference:
     """
     Return a Firestore CollectionReference.
 

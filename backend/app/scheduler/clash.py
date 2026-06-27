@@ -177,7 +177,7 @@ def validate_faculty_clashes(entries: List[Any]) -> List[Dict]:
     clashes = []
 
     for entry in entries:
-        if getattr(entry, "subject", None) in ("BUFFER SLOT",) or getattr(entry, "faculty", "-") in ("-", ""):
+        if getattr(entry, "subject", None) in ("FREE SLOT",) or getattr(entry, "faculty", "-") in ("-", ""):
             continue
         key = (entry.day, entry.slot)
         fac = entry.faculty

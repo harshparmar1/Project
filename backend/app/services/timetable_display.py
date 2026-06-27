@@ -9,14 +9,14 @@ def _is_elective(entry: Dict[str, Any]) -> bool:
 def _is_lab(entry: Dict[str, Any]) -> bool:
     if _is_elective(entry):
         return False
-    if entry.get("subject") in ("BUFFER SLOT", "TDPCL"):
+    if entry.get("subject") in ("FREE SLOT", "TDPCL"):
         return False
     return bool(entry.get("batch"))
 
 
 def _entry_type(entry: Dict[str, Any]) -> str:
-    if entry.get("subject") in ("BUFFER SLOT",):
-        return "buffer"
+    if entry.get("subject") in ("FREE SLOT",):
+        return "free_slot"
     if entry.get("subject") == "TDPCL" or entry.get("isSpecial"):
         return "special"
     if _is_elective(entry):

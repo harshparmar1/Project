@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { login, getDepartments } from '../services/api';
 import { Calendar, Mail, Lock, Building2, Key, AlertCircle, ArrowRight, ChevronDown, Clock, BookOpen, GraduationCap, Bell, Pencil, Trophy, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
+import loginPageImage from '../assets/login-page-image.jpeg';
+import jainLogo from '../assets/jain-logo.png';
 
 const Login = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
@@ -91,286 +93,278 @@ const Login = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-200 via-sky-100 to-blue-300 text-slate-800 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Orbs with framer-motion floating animations */}
-      <motion.div
-        animate={{
-          x: [0, 40, -20, 0],
-          y: [0, -40, 20, 0],
-          scale: [1, 1.05, 0.95, 1],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        className="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] bg-primary-300/40 rounded-full blur-[100px] pointer-events-none"
-      />
-      <motion.div
-        animate={{
-          x: [0, -50, 30, 0],
-          y: [0, 40, -30, 0],
-          scale: [1, 0.95, 1.05, 1],
-        }}
-        transition={{
-          duration: 15,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-300/30 rounded-full blur-[120px] pointer-events-none"
-      />
-      <motion.div
-        animate={{
-          x: [0, 30, -30, 0],
-          y: [0, 40, 40, 0],
-        }}
-        transition={{
-          duration: 18,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        className="absolute top-[30%] right-[20%] w-[300px] h-[300px] bg-sky-200/40 rounded-full blur-[80px] pointer-events-none"
-      />
-
-      {/* Floating College Symbols */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {[
-          { Icon: GraduationCap, top: "15%", left: "8%", size: 48, rotate: 12, delay: 0, duration: 14 },
-          { Icon: BookOpen, top: "22%", right: "10%", size: 40, rotate: -8, delay: 2, duration: 16 },
-          { Icon: Pencil, top: "52%", left: "5%", size: 36, rotate: 15, delay: 4, duration: 13 },
-          { Icon: Trophy, top: "48%", right: "6%", size: 44, rotate: -15, delay: 1, duration: 18 },
-          { Icon: Bell, top: "80%", left: "12%", size: 38, rotate: 10, delay: 5, duration: 15 },
-          { Icon: Award, top: "75%", right: "12%", size: 42, rotate: 8, delay: 3, duration: 17 },
-          { Icon: Building2, top: "35%", left: "15%", size: 32, rotate: -5, delay: 6, duration: 20 },
-        ].map((item, idx) => (
-          <motion.div
-            key={idx}
-            style={{
-              position: 'absolute',
-              top: item.top,
-              left: item.left,
-              right: item.right,
-            }}
-            animate={{
-              y: [0, -25, 25, 0],
-              x: [0, 15, -15, 0],
-              rotate: [item.rotate, item.rotate + 15, item.rotate - 15, item.rotate],
-            }}
-            transition={{
-              duration: item.duration,
-              repeat: Infinity,
-              delay: item.delay,
-              ease: "easeInOut"
-            }}
-            className="hidden md:flex items-center justify-center p-3 bg-white/50 backdrop-blur-sm border border-slate-200/40 rounded-2xl shadow-[0_8px_30px_rgba(8,112,184,0.04)] text-primary-500/25 pointer-events-none select-none"
-          >
-            <item.Icon style={{ width: item.size, height: item.size }} />
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Grid Pattern Background */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none opacity-[0.25]"
-        style={{
-          backgroundImage: `linear-gradient(to right, rgba(2, 132, 199, 0.08) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(2, 132, 199, 0.08) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px',
-        }}
-      />
-
-      {/* Glowing Timetable Grid Slots */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {[
-          { top: '20%', left: '30%', width: '100px', height: '50px', delay: 0 },
-          { top: '40%', left: '70%', width: '150px', height: '50px', delay: 2 },
-          { top: '60%', left: '15%', width: '100px', height: '100px', delay: 4 },
-          { top: '10%', left: '80%', width: '100px', height: '50px', delay: 1 },
-          { top: '80%', left: '60%', width: '150px', height: '50px', delay: 3 },
-        ].map((slot, i) => (
-          <motion.div
-            key={i}
-            className="absolute bg-primary-400/5 border border-primary-500/10 rounded-lg hidden md:block"
-            style={{
-              top: slot.top,
-              left: slot.left,
-              width: slot.width,
-              height: slot.height,
-            }}
-            animate={{
-              opacity: [0.1, 0.5, 0.1],
-              scale: [1, 1.01, 1],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              delay: slot.delay,
-              ease: "easeInOut"
-            }}
+    <div className="min-h-screen w-full bg-slate-950 flex flex-col md:flex-row text-slate-800 font-sans overflow-hidden relative">
+      {/* LEFT SIDE: College Branding */}
+      <div className="relative w-full md:w-[55%] lg:w-[58%] h-[35vh] md:h-screen flex items-end md:items-center justify-center overflow-hidden">
+        {/* Background Image */}
+        <motion.div
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          className="absolute inset-0 w-full h-full"
+        >
+          <img
+            src={loginPageImage}
+            alt="Jain University Campus"
+            className="w-full h-full object-cover transition-transform duration-10000 hover:scale-105 ease-out"
           />
-        ))}
-      </div>
+        </motion.div>
 
-      {/* Floating Timetable/Academic Symbols */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {['T', 't', 'Sec A', 'Sec B', 'UG', 'PG', '+', '=', 'Σ', '10:00', '14:00', 'Lab', 'Lec', '⏰', '📚', '✏️', 'Mon', 'Fri'].map((sym, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-primary-600/15 font-bold select-none pointer-events-none font-mono"
-            style={{
-              fontSize: (i % 3 === 0 ? 20 : i % 3 === 1 ? 15 : 11) + 'px',
-              left: ((i * 17) % 95) + 2 + '%',
-              bottom: '-5%',
-            }}
-            animate={{
-              y: ['0vh', '-110vh'],
-              x: ['0px', (((i * 29) % 80) - 40) + 'px'],
-              rotate: [0, 360],
-              opacity: [0, 0.6, 0],
-            }}
-            transition={{
-              duration: ((i * 7) % 8) + 12,
-              repeat: Infinity,
-              delay: (i * 2.3) % 10,
-              ease: "linear",
-            }}
-          >
-            {sym}
-          </motion.div>
-        ))}
-      </div>
+        {/* Overlay with subtle blue-toned dark theme */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent md:bg-gradient-to-r md:from-slate-950/80 md:via-slate-900/40 md:to-transparent" />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="w-full max-w-md bg-blue-50/90 backdrop-blur-xl border border-blue-200/60 p-8 rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.08)] relative z-10"
-      >
-        <div className="flex flex-col items-center gap-3 mb-8">
+        {/* Branding Overlay Info */}
+        <div className="relative z-10 w-full p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col gap-2 md:gap-3">
           <motion.div
-            whileHover={{ scale: 1.08, rotate: 5 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-600/30 cursor-pointer"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 border border-primary-400/20 backdrop-blur-md text-primary-200 text-xs font-semibold tracking-wider uppercase self-start"
           >
-            <Calendar className="text-white w-6 h-6" />
+            <GraduationCap className="w-4 h-4 text-primary-300 animate-pulse" />
+            <span>Official University Portal</span>
           </motion.div>
-          <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-primary-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Welcome Back
-          </h2>
-          <p className="text-sm text-slate-500">Sign in to manage your timetable</p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+          >
+            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">
+              Welcome to Jain University
+            </h1>
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-sky-200 mt-0.5 md:mt-1">
+              School of Science
+            </p>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed hidden sm:block"
+          >
+            Empowering minds, shaping the future through excellence in science and technology.
+            Access your courses, exams, schedules, and personalized academic planner in a single dashboard.
+          </motion.p>
         </div>
 
-        {error && (
+        {/* Small aesthetic corner touch on Left Side */}
+
+      </div>
+
+      {/* RIGHT SIDE: Login Form */}
+      <div className="relative w-full md:w-[45%] lg:w-[42%] min-h-[65vh] md:h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 md:p-6 lg:p-8 overflow-y-auto">
+        {/* Background Decorative Orbs inside Right Panel */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-start gap-2.5 text-sm"
-          >
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </motion.div>
-        )}
+            animate={{
+              x: [0, 20, -10, 0],
+              y: [0, -30, 15, 0],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute top-[-5%] right-[-5%] w-[250px] h-[250px] bg-primary-200/40 rounded-full blur-[80px]"
+          />
+          <motion.div
+            animate={{
+              x: [0, -30, 20, 0],
+              y: [0, 20, -20, 0],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute bottom-[-5%] left-[-5%] w-[300px] h-[300px] bg-indigo-200/30 rounded-full blur-[100px]"
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email */}
-          <motion.div variants={itemVariants} className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 tracking-wider uppercase">
-              Email Address
-            </label>
-            <div className="relative group">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors duration-200" />
-              <input
-                type="email"
-                placeholder="you@college.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10.5 pr-4 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 placeholder:text-slate-400 focus:bg-white focus:shadow-sm"
-              />
-            </div>
-          </motion.div>
-
-          {/* Password */}
-          <motion.div variants={itemVariants} className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 tracking-wider uppercase">
-              Password
-            </label>
-            <div className="relative group">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors duration-200" />
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10.5 pr-4 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 placeholder:text-slate-400 focus:bg-white focus:shadow-sm"
-              />
-            </div>
-          </motion.div>
-
-          {/* Department Selection */}
-          <motion.div variants={itemVariants} className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 tracking-wider uppercase">
-              Department
-            </label>
-            <div className="relative group">
-              <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors duration-200" />
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10.5 pr-10 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 appearance-none focus:bg-white focus:shadow-sm"
-              >
-                {departmentsList.map((dept) => (
-                  <option key={dept.name} value={dept.name} className="bg-white text-slate-800">
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none group-hover:text-slate-500 transition-colors" />
-            </div>
-          </motion.div>
-
-          {/* Department Code */}
-          <motion.div variants={itemVariants} className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 tracking-wider uppercase">
-              Department Code
-            </label>
-            <div className="relative group">
-              <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors duration-200" />
-              <input
-                type="text"
-                placeholder="e.g. DS2026"
-                value={departmentCode}
-                onChange={(e) => setDepartmentCode(e.target.value)}
-                className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 rounded-xl py-3 pl-10.5 pr-4 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 placeholder:text-slate-400 focus:bg-white focus:shadow-sm"
-              />
-            </div>
-          </motion.div>
-
-          {/* Submit Button */}
-          <motion.div variants={itemVariants} className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 via-blue-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-primary-500/20 hover:shadow-primary-500/30 transition-all active:scale-[0.98] disabled:opacity-50"
+        {/* Floating Academic Symbols in Right Panel Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 hidden sm:block">
+          {[
+            { Icon: BookOpen, top: "12%", right: "12%", size: 24, rotate: 8, delay: 0 },
+            { Icon: Award, top: "78%", left: "10%", size: 28, rotate: -12, delay: 2 },
+            { Icon: Clock, top: "45%", right: "8%", size: 22, rotate: 15, delay: 4 },
+          ].map((item, idx) => (
+            <motion.div
+              key={idx}
+              style={{
+                position: 'absolute',
+                top: item.top,
+                left: item.left,
+                right: item.right,
+              }}
+              animate={{
+                y: [0, -10, 10, 0],
+                rotate: [item.rotate, item.rotate + 10, item.rotate - 10, item.rotate],
+              }}
+              transition={{
+                duration: 8 + idx * 2,
+                repeat: Infinity,
+                delay: item.delay,
+                ease: "easeInOut"
+              }}
+              className="text-primary-600/10 pointer-events-none select-none"
             >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </motion.div>
-        </form>
+              <item.Icon style={{ width: item.size, height: item.size }} />
+            </motion.div>
+          ))}
+        </div>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
-          Don&apos;t have an account?{' '}
-          <Link to="/signup" className="text-primary-600 hover:text-primary-500 font-semibold hover:underline">
-            Sign up here
-          </Link>
-        </p>
-      </motion.div>
+        {/* Grid Pattern Background for form section */}
+        <div
+          className="absolute inset-0 z-0 pointer-events-none opacity-[0.15]"
+          style={{
+            backgroundImage: `linear-gradient(to right, rgba(2, 132, 199, 0.08) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(2, 132, 199, 0.08) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        {/* Content Wrapper */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-slate-200/50 p-5 sm:p-6 md:p-6 lg:p-7 rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.06)] relative z-10"
+        >
+          {/* Logo & Branding */}
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center justify-center p-1 bg-white rounded-xl shadow-sm border border-slate-100"
+            >
+              <img
+                src={jainLogo}
+                alt="Jain University Logo"
+                className="h-11 sm:h-13 w-auto object-contain"
+              />
+            </motion.div>
+            <div className="text-center">
+              <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary-700 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                Sign In to Portal
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">Provide credentials to access timetable scheduler</p>
+            </div>
+          </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-start gap-2 text-[11px] sm:text-xs"
+            >
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </motion.div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Email Address */}
+            <motion.div variants={itemVariants} className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                Email Address
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-primary-600 transition-colors duration-200" />
+                <input
+                  type="email"
+                  placeholder="you@college.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-50/50 border border-slate-200/80 hover:border-slate-300 rounded-xl py-2 pl-9.5 pr-4 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200 placeholder:text-slate-400 focus:bg-white focus:shadow-sm"
+                />
+              </div>
+            </motion.div>
+
+            {/* Password */}
+            <motion.div variants={itemVariants} className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                Password
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-primary-600 transition-colors duration-200" />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-50/50 border border-slate-200/80 hover:border-slate-300 rounded-xl py-2 pl-9.5 pr-4 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200 placeholder:text-slate-400 focus:bg-white focus:shadow-sm"
+                />
+              </div>
+            </motion.div>
+
+            {/* Department Selection */}
+            <motion.div variants={itemVariants} className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                Department
+              </label>
+              <div className="relative group">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-primary-600 transition-colors duration-200" />
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full bg-slate-50/50 border border-slate-200/80 hover:border-slate-300 rounded-xl py-2 pl-9.5 pr-10 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200 appearance-none focus:bg-white focus:shadow-sm"
+                >
+                  {departmentsList.map((dept) => (
+                    <option key={dept.name} value={dept.name} className="bg-white text-slate-800 text-xs">
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none group-hover:text-slate-500 transition-colors" />
+              </div>
+            </motion.div>
+
+            {/* Department Code */}
+            <motion.div variants={itemVariants} className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                Unique Department Code
+              </label>
+              <div className="relative group">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-primary-600 transition-colors duration-200" />
+                <input
+                  type="text"
+                  placeholder="e.g. DS2026"
+                  value={departmentCode}
+                  onChange={(e) => setDepartmentCode(e.target.value)}
+                  className="w-full bg-slate-50/50 border border-slate-200/80 hover:border-slate-300 rounded-xl py-2 pl-9.5 pr-4 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200 placeholder:text-slate-400 focus:bg-white focus:shadow-sm"
+                />
+              </div>
+            </motion.div>
+
+            {/* Submit Button */}
+            <motion.div variants={itemVariants} className="pt-1.5">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 via-blue-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500 text-white font-semibold py-2.5 rounded-xl shadow-md shadow-primary-500/10 hover:shadow-lg hover:shadow-primary-500/20 transition-all active:scale-[0.98] disabled:opacity-50 text-xs sm:text-sm"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Sign In to Portal</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </motion.div>
+          </form>
+
+          <p className="text-center text-xs text-slate-500 mt-4">
+            Don&apos;t have an account?{' '}
+            <Link to="/signup" className="text-primary-600 hover:text-primary-500 font-semibold hover:underline">
+              Sign up here
+            </Link>
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 };

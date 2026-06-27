@@ -116,11 +116,11 @@ def test_scheduler():
     assert len(timetable) > 0, "Failed to generate timetable entries!"
     print(f"Generated {len(timetable)} entries.")
 
-    # 8. Verify No Buffer Slots
-    print("Verifying No Buffer Slots...")
+    # 8. Verify No Free Slots
+    print("Verifying No Free Slots...")
     for entry in timetable:
-        assert entry.subject not in ("BUFFER", "BUFFER SLOT", "FREE BUFFER"), f"Buffer slot found: {entry}"
-    print("[OK] No buffer slots test passed.")
+        assert entry.subject not in ("BUFFER", "FREE SLOT", "FREE BUFFER"), f"Free slot found: {entry}"
+    print("[OK] No free slots test passed.")
 
     # 9. Verify Elective vs Core Lecture Conflict Prevention
     print("Verifying Elective vs Core Lecture Conflict Prevention...")
@@ -131,7 +131,7 @@ def test_scheduler():
                 continue
             
             has_elective = any(e.is_elective for e in slot_entries)
-            has_core = any(not e.is_elective and e.subject not in ("BUFFER SLOT", "TDPCL") for e in slot_entries)
+            has_core = any(not e.is_elective and e.subject not in ("FREE SLOT", "TDPCL") for e in slot_entries)
             
             # An elective and a core lecture must not happen in the same slot for the same semester
             assert not (has_elective and has_core), f"Elective conflict at {day} Slot {slot}! Elective and Core Lecture scheduled together."

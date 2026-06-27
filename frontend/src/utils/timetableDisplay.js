@@ -2,7 +2,7 @@
 
 export const inferEntryType = (entry) => {
   if (entry.type) return entry.type;
-  if (entry.subject === 'BUFFER SLOT') return 'buffer';
+  if (entry.subject === 'FREE SLOT') return 'free_slot';
   if (entry.subject === 'TDPCL' || entry.isSpecial) return 'special';
   if (entry.isElective || entry.is_elective) return 'elective';
   if (entry.batch) return 'lab';

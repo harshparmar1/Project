@@ -13,7 +13,7 @@ def _today_name() -> str:
 
 def infer_entry_type(entry: Dict[str, Any]) -> str:
     subject = entry.get("subject", "")
-    if subject in ("BUFFER SLOT", "TDPCL"):
+    if subject in ("FREE SLOT", "TDPCL"):
         return "Special"
     if entry.get("is_elective") or entry.get("isElective"):
         return "Elective"
@@ -54,7 +54,7 @@ def detect_faculty_clashes(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]
     clashes = []
 
     for entry in entries:
-        if entry.get("subject") in ("BUFFER SLOT",) or entry.get("faculty") in ("-", ""):
+        if entry.get("subject") in ("FREE SLOT",) or entry.get("faculty") in ("-", ""):
             continue
         key = (entry["day"], entry["slot"])
         by_slot.setdefault(key, []).append(entry)

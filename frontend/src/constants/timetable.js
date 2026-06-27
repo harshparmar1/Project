@@ -68,7 +68,7 @@ export const inferEntryType = (entry) => {
   if (entry.type === 'elective' || entry.isElective || entry.is_elective) return 'Elective';
   if (entry.type === 'lab') return 'Lab';
   if (entry.type === 'lecture') return 'Lecture';
-  if (entry.subject === 'BUFFER SLOT' || entry.subject === 'TDPCL') return 'Special';
+  if (entry.subject === 'FREE SLOT' || entry.subject === 'TDPCL') return 'Special';
   if (entry.isElective || entry.is_elective) return 'Elective';
   if (entry.batch) return 'Lab';
   return 'Lecture';
